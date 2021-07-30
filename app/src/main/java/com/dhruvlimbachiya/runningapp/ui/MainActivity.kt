@@ -1,11 +1,11 @@
-package com.dhruvlimbachiya.runningapp
+package com.dhruvlimbachiya.runningapp.ui
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import com.dhruvlimbachiya.runningapp.R
 import com.dhruvlimbachiya.runningapp.db.RunDao
 import dagger.hilt.android.AndroidEntryPoint
-import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
 @AndroidEntryPoint
