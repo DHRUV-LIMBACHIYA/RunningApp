@@ -6,6 +6,7 @@ import android.util.Log
 import com.dhruvlimbachiya.runningapp.R
 import com.dhruvlimbachiya.runningapp.db.RunDao
 import dagger.hilt.android.AndroidEntryPoint
+import timber.log.Timber
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -17,6 +18,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        Log.i("MainActivity", "onCreate: ${mDao.hashCode()} ")
+        Timber.i("onCreate: ${mDao.hashCode()}")
     }
 }
