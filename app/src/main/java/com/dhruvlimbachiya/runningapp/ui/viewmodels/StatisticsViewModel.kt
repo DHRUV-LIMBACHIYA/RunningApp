@@ -1,5 +1,6 @@
 package com.dhruvlimbachiya.runningapp.ui.viewmodels
 
+import androidx.lifecycle.ViewModel
 import com.dhruvlimbachiya.runningapp.repositories.RunRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -11,5 +12,5 @@ import javax.inject.Inject
 @HiltViewModel
 class StatisticsViewModel @Inject constructor(
     private val runRepository: RunRepository
-){
+) : ViewModel(){
 }
