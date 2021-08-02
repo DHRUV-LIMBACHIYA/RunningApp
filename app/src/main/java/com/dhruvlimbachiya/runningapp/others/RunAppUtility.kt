@@ -11,6 +11,11 @@ import pub.devrel.easypermissions.EasyPermissions
 
 object RunAppUtility {
 
+    /**
+     * Function to check app has location permission or not.
+     * "ACCESS_BACKGROUND_LOCATION" is only available on version Q or above Q.
+     * @return boolean - true if it has permissions or false if it hasn't.
+     */
     fun hasLocationPermission(context: Context) =
         if(Build.VERSION.SDK_INT > Build.VERSION_CODES.Q){
             EasyPermissions.hasPermissions(
