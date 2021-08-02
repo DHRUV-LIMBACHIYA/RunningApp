@@ -1,36 +1,57 @@
 package com.dhruvlimbachiya.runningapp.ui
 
-import androidx.appcompat.app.AppCompatActivity
+import android.content.Intent
 import android.os.Bundle
-import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.dhruvlimbachiya.runningapp.R
-import com.dhruvlimbachiya.runningapp.db.RunDao
+import com.dhruvlimbachiya.runningapp.others.Constants.ACTION_NAVIGATE_TO_TRACKING_FRAGMENT
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.activity_main.*
-import timber.log.Timber
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var navHostFragment: NavHostFragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val navHost = supportFragmentManager.findFragmentById(R.id.fragmentContainerView) as NavHostFragment // Find the NavHostFragment.
-        bottomNavigationView.setupWithNavController(navHost.findNavController()) // Set navController to BottomNavigationView
+        navigateToTrackingFragmentIfNeeded(intent)
 
-        navHost.findNavController().addOnDestinationChangedListener { _, destination, _ ->
-            when(destination.id){
+        navHostFragment =
+            supportFragmentManager.findFragmentById(R.id.fragmentContainerView) as NavHostFragment // Find the NavHostFragment.
+        bottomNavigationView.setupWithNavController(navHostFragment.findNavController()) // Set navController to BottomNavigationView
+
+        navHostFragment.findNavController().addOnDestinationChangedListener { _, destination, _ ->
+            when (destination.id) {
                 // Display BottomNavigationView only on these fragments.
-                R.id.runFragment,R.id.settingsFragment,R.id.statisticsFragment -> {
+                R.id.runFragment, R.id.settingsFragment, R.id.statisticsFragment -> {
                     bottomNavigationView.isVisible = true
                 }
                 else -> bottomNavigationView.isVisible = false
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        navigateToTrackingFragmentIfNeeded(intent)
+    }
+
+    /**
+     * Navigate to Tracking Fragment if the intent action == "ACTION_NAVIGATE_TO_TRACKING_FRAGMENT"
+     */
+    private fun navigateToTrackingFragmentIfNeeded(intent: Intent?) {
+        intent?.action.let {
+            if (it == ACTION_NAVIGATE_TO_TRACKING_FRAGMENT) {
+                navHostFragment.findNavController().navigate(
+                    R.id.action_global_tracking_fragment
+                )
             }
         }
     }
