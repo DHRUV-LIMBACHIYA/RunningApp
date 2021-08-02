@@ -9,7 +9,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.dhruvlimbachiya.runningapp.R
 import com.dhruvlimbachiya.runningapp.others.Constants.REQUEST_CODE_LOCATION_PERMISSION
-import com.dhruvlimbachiya.runningapp.others.RunAppUtility
+import com.dhruvlimbachiya.runningapp.others.TrackingUtility
 import com.dhruvlimbachiya.runningapp.ui.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.fragment_run.*
@@ -39,7 +39,7 @@ class RunFragment : Fragment(R.layout.fragment_run), EasyPermissions.PermissionC
     }
 
     private fun requestPermission() {
-        if(RunAppUtility.hasLocationPermission(requireContext())){
+        if(TrackingUtility.hasLocationPermission(requireContext())){
             return
         }
 
