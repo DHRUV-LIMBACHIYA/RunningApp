@@ -9,7 +9,7 @@ import pub.devrel.easypermissions.EasyPermissions
  * Created by Dhruv Limbachiya on 02-08-2021.
  */
 
-object RunAppUtility {
+object TrackingUtility {
 
     fun hasLocationPermission(context: Context) =
         if(Build.VERSION.SDK_INT > Build.VERSION_CODES.Q){
