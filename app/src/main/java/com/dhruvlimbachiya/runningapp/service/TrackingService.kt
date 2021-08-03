@@ -32,7 +32,12 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.util.*
+import java.util.concurrent.TimeUnit
 
 /**
  * Created by Dhruv Limbachiya on 02-08-2021.
@@ -62,10 +67,11 @@ class TrackingService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         postInitialValues()
-        fusedLocationProviderClient = FusedLocationProviderClient(this) // Create an instance of FusedLocationProviderClient.
+        fusedLocationProviderClient =
+            FusedLocationProviderClient(this) // Create an instance of FusedLocationProviderClient.
 
         // Observe the changes in the isTracking LiveData.
-        isTracking.observe(this){
+        isTracking.observe(this) {
             updateLocationTracking(it)
         }
     }
@@ -78,11 +84,13 @@ class TrackingService : LifecycleService() {
                         startForegroundService()
                         isFirstTime = false
                     } else {
+                        startForegroundService()
                         Timber.i("Resuming the service...")
                     }
                 }
 
                 ACTION_PAUSE_SERVICE -> {
+                    pauseService()
                     Timber.i("Action service paused")
                 }
 
@@ -93,6 +101,11 @@ class TrackingService : LifecycleService() {
         }
         return super.onStartCommand(intent, flags, startId)
     }
+
+    private fun pauseService() {
+        isTracking.postValue(false)
+    }
+
 
     /**
      * Function responsible for requesting location update through FusedLocationProviderClient
@@ -117,7 +130,7 @@ class TrackingService : LifecycleService() {
                     Looper.getMainLooper()
                 )
             }
-        }else {
+        } else {
             // Detach client from getting the location updates by specifying locationCallback.
             fusedLocationProviderClient.removeLocationUpdates(locationCallback)
         }
@@ -149,6 +162,7 @@ class TrackingService : LifecycleService() {
             pathPoints.value?.apply {
                 last().add(pos) // Get the last element(PolyLines => (Last PolyLine - ListOf<LatLng>)) and add an pos(LatLng) to it.
                 pathPoints.postValue(this) // Update the pathPoint livedata.
+                Timber.i("Location List : ${pathPoints.value?.toList()}")
             }
         }
     }
@@ -160,7 +174,8 @@ class TrackingService : LifecycleService() {
         pathPoints.value?.apply {
             add(mutableListOf()) // add an empty polyLine(LatLng) in PolyLines list.
             pathPoints.postValue(this)
-        } ?: pathPoints.postValue(mutableListOf(mutableListOf())) // If the PolyLines list has no data then add empty PolyLines with an empty PolyLine(LatLng)
+        }
+            ?: pathPoints.postValue(mutableListOf(mutableListOf())) // If the PolyLines list has no data then add empty PolyLines with an empty PolyLine(LatLng)
     }
 
     /**

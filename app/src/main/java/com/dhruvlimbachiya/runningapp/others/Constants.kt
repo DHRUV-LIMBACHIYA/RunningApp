@@ -1,5 +1,7 @@
 package com.dhruvlimbachiya.runningapp.others
 
+import android.graphics.Color
+
 /**
  * Created by Dhruv Limbachiya on 30-07-2021.
  */
@@ -23,4 +25,10 @@ object Constants {
     // Location Constants
     const val LOCATION_UPDATE_INTERVAL = 5000L
     const val LOCATION_UPDATE_FASTEST_INTERVAL = 2000L
+
+    // PolyLine Options
+    const val POLYLINE_WIDTH = 8f
+    const val POLYLINE_COLOR = Color.RED
+    const val CAMERA_ZOOM = 15f
+
 }
