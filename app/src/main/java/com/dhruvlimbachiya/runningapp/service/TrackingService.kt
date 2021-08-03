@@ -35,6 +35,12 @@ import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.maps.model.LatLng
 import timber.log.Timber
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -75,6 +81,31 @@ class TrackingService : LifecycleService() {
             updateLocationTracking(it)
         }
     }
+    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
+
+    companion object {
+        var isTracking = MutableLiveData<Boolean>()
+        var pathPoints = MutableLiveData<PolyLines>()
+    }
+
+    /**
+     * Add/Post initial values to LiveData vars.
+     */
+    private fun postInitialValues() {
+        isTracking.postValue(false)
+        pathPoints.postValue(mutableListOf())
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        postInitialValues()
+        fusedLocationProviderClient = FusedLocationProviderClient(this) // Create an instance of FusedLocationProviderClient.
+
+        // Observe the changes in the isTracking LiveData.
+        isTracking.observe(this){
+            updateLocationTracking(it)
+        }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.let {
@@ -102,6 +133,74 @@ class TrackingService : LifecycleService() {
         return super.onStartCommand(intent, flags, startId)
     }
 
+    /**
+     * Function responsible for requesting location update through FusedLocationProviderClient
+     * 1. Construct the LocationRequest.
+     * 2. Client request for the location updates by specifying the request,callback & Looper
+     */
+    @SuppressLint("MissingPermission")
+    private fun updateLocationTracking(isTracking: Boolean) {
+        if (isTracking) {
+            if (TrackingUtility.hasLocationPermission(this)) {
+                // Construct a location request for FusedLocationProvider Client
+                val request = LocationRequest().apply {
+                    interval = LOCATION_UPDATE_INTERVAL
+                    fastestInterval = LOCATION_UPDATE_FASTEST_INTERVAL
+                    priority = PRIORITY_HIGH_ACCURACY
+                }
+
+                // Client request for the location update.
+                fusedLocationProviderClient.requestLocationUpdates(
+                    request,
+                    locationCallback,
+                    Looper.getMainLooper()
+                )
+            }
+        }else {
+            // Detach client from getting the location updates by specifying locationCallback.
+            fusedLocationProviderClient.removeLocationUpdates(locationCallback)
+        }
+    }
+
+    /**
+     * Callback for receiving location updates,extract LatLng from LocationResult and pass it to addPathPoints() fun.
+     */
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            super.onLocationResult(locationResult)
+            if (isTracking.value == true) {
+                locationResult.locations.let { locations ->
+                    for (location in locations) {
+                        addPathPoints(location)
+                        Timber.i("Updated Location : Lat => ${location.latitude} Lng => ${location.longitude}")
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Add the LatLng object into last element of PolyLines list.
+     */
+    private fun addPathPoints(location: Location?) {
+        location?.let {
+            val pos = LatLng(location.latitude, location.longitude)
+            pathPoints.value?.apply {
+                last().add(pos) // Get the last element(PolyLines => (Last PolyLine - ListOf<LatLng>)) and add an pos(LatLng) to it.
+                pathPoints.postValue(this) // Update the pathPoint livedata.
+            }
+        }
+    }
+
+    /**
+     * Add Empty PolyLine(List<LatLng>) into PolyLines List indicating runner "Stop/Pause" Activity.
+     */
+    private fun addEmptyPolyLine() {
+        pathPoints.value?.apply {
+            add(mutableListOf()) // add an empty polyLine(LatLng) in PolyLines list.
+            pathPoints.postValue(this)
+        } ?: pathPoints.postValue(mutableListOf(mutableListOf())) // If the PolyLines list has no data then add empty PolyLines with an empty PolyLine(LatLng)
+    }
     private fun pauseService() {
         isTracking.postValue(false)
     }

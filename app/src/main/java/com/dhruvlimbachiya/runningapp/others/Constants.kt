@@ -31,4 +31,8 @@ object Constants {
     const val POLYLINE_COLOR = Color.RED
     const val CAMERA_ZOOM = 15f
 
+
+    // Location Constants
+    const val LOCATION_UPDATE_INTERVAL = 5000L
+    const val LOCATION_UPDATE_FASTEST_INTERVAL = 2000L
 }
