@@ -14,6 +14,7 @@ import com.dhruvlimbachiya.runningapp.others.Constants.ACTION_START_OR_RESUME_SE
 import com.dhruvlimbachiya.runningapp.others.Constants.CAMERA_ZOOM
 import com.dhruvlimbachiya.runningapp.others.Constants.POLYLINE_COLOR
 import com.dhruvlimbachiya.runningapp.others.Constants.POLYLINE_WIDTH
+import com.dhruvlimbachiya.runningapp.others.TrackingUtility
 import com.dhruvlimbachiya.runningapp.service.PolyLine
 import com.dhruvlimbachiya.runningapp.service.TrackingService
 import com.dhruvlimbachiya.runningapp.ui.viewmodels.MainViewModel
@@ -36,6 +37,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
 
     private var isTracking = false
     private var pathPoints = mutableListOf<PolyLine>()
+    private var timeInMills = 0L
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -82,6 +84,11 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
             pathPoints = it // Get the fresh list of PolyLines.
             drawPolyLineUsingLatestLatLng()
             moveCameraToRunner()
+        }
+
+        TrackingService.totalTimeRunInMillis.observe(viewLifecycleOwner){
+            timeInMills = it
+            tvTimer.text = TrackingUtility.getFormattedStopWatchTime(it,true)
         }
     }
 

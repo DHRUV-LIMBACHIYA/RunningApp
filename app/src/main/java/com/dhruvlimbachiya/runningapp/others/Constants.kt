@@ -31,4 +31,5 @@ object Constants {
     const val POLYLINE_COLOR = Color.RED
     const val CAMERA_ZOOM = 15f
 
+    const val TIME_ELAPSED_DELAY = 50L
 }

@@ -24,6 +24,7 @@ import com.dhruvlimbachiya.runningapp.others.Constants.LOCATION_UPDATE_INTERVAL
 import com.dhruvlimbachiya.runningapp.others.Constants.NOTIFICATION_CHANNEL_ID
 import com.dhruvlimbachiya.runningapp.others.Constants.NOTIFICATION_CHANNEL_NAME
 import com.dhruvlimbachiya.runningapp.others.Constants.NOTIFICATION_ID
+import com.dhruvlimbachiya.runningapp.others.Constants.TIME_ELAPSED_DELAY
 import com.dhruvlimbachiya.runningapp.others.TrackingUtility
 import com.dhruvlimbachiya.runningapp.ui.MainActivity
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -34,10 +35,9 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import java.util.*
-import java.util.concurrent.TimeUnit
 
 /**
  * Created by Dhruv Limbachiya on 02-08-2021.
@@ -51,9 +51,12 @@ class TrackingService : LifecycleService() {
     private var isFirstTime = true
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
+    private var totalTimeRunInSeconds = MutableLiveData<Long>() // LiveData to display time in notifications [00:00:00]
+
     companion object {
         var isTracking = MutableLiveData<Boolean>()
         var pathPoints = MutableLiveData<PolyLines>()
+        var totalTimeRunInMillis = MutableLiveData<Long>() // LiveData for TrackingFragment stop-watch TextView.
     }
 
     /**
@@ -62,6 +65,8 @@ class TrackingService : LifecycleService() {
     private fun postInitialValues() {
         isTracking.postValue(false)
         pathPoints.postValue(mutableListOf())
+        totalTimeRunInSeconds.postValue(0L)
+        totalTimeRunInMillis.postValue(0L)
     }
 
     override fun onCreate() {
@@ -84,7 +89,7 @@ class TrackingService : LifecycleService() {
                         startForegroundService()
                         isFirstTime = false
                     } else {
-                        startForegroundService()
+                        startTimer()
                         Timber.i("Resuming the service...")
                     }
                 }
@@ -100,6 +105,42 @@ class TrackingService : LifecycleService() {
             }
         }
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    private var timerStarted = 0L
+    private var elapsedTime = 0L
+    private var totalElapsedTime = 0L
+    private var lastSecondsTimestamp = 0L
+
+    private fun startTimer() {
+        addEmptyPolyLine() // Add Empty PolyLine on fresh START or on RESUME
+        isTracking.postValue(true) // Start tracking location.
+        timerStarted = System.currentTimeMillis()
+
+        CoroutineScope(Dispatchers.Main).launch {
+            while(isTracking.value == true){
+                // Time difference between time started and now.
+                elapsedTime = System.currentTimeMillis() - timerStarted
+
+                // Post the total time in millis by calculating the previous elapsedTime + current elapsed time.
+                totalTimeRunInMillis.postValue(totalElapsedTime + elapsedTime)
+
+                /**
+                 * This if block will only execute when totalTimeRunInMills will completed one entire second in millis.
+                 * One entire seconds = 1000L.
+                 * It will allow to enter in the if block when totalTimeRunInMillis values are like 1000L,2000L,3000L as so on...(just an example)
+                 */
+                if(totalTimeRunInMillis.value!! >= lastSecondsTimestamp + 1000L){
+                    totalTimeRunInSeconds.postValue(totalTimeRunInSeconds.value?: 0L + 1)  // Post the total seconds elapsed.
+                    lastSecondsTimestamp += 1000L // Add 1 sec in millis in global variable which will be used when runner transition from pause => resume state.
+                }
+
+                delay(TIME_ELAPSED_DELAY) // Minor delay.
+            }
+
+            // Add elapsedTime with totalElapsed time so whenever runner start re-tracking it will start from where the runner left previously.
+            totalElapsedTime += elapsedTime
+        }
     }
 
     private fun pauseService() {
@@ -182,7 +223,7 @@ class TrackingService : LifecycleService() {
      * Function responsible for starting a foreground service displaying notification.
      */
     private fun startForegroundService() {
-        addEmptyPolyLine()
+        startTimer()
         isTracking.postValue(true) // Start tracking.
 
         val notificationManager =
