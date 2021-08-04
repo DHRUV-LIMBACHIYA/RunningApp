@@ -15,7 +15,6 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.MutableLiveData
 import com.dhruvlimbachiya.runningapp.R
-import com.dhruvlimbachiya.runningapp.others.Constants.ACTION_NAVIGATE_TO_TRACKING_FRAGMENT
 import com.dhruvlimbachiya.runningapp.others.Constants.ACTION_PAUSE_SERVICE
 import com.dhruvlimbachiya.runningapp.others.Constants.ACTION_START_OR_RESUME_SERVICE
 import com.dhruvlimbachiya.runningapp.others.Constants.ACTION_STOP_SERVICE
@@ -26,7 +25,6 @@ import com.dhruvlimbachiya.runningapp.others.Constants.NOTIFICATION_CHANNEL_NAME
 import com.dhruvlimbachiya.runningapp.others.Constants.NOTIFICATION_ID
 import com.dhruvlimbachiya.runningapp.others.Constants.TIME_ELAPSED_DELAY
 import com.dhruvlimbachiya.runningapp.others.TrackingUtility
-import com.dhruvlimbachiya.runningapp.ui.MainActivity
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -59,12 +57,16 @@ class TrackingService : LifecycleService() {
     @Inject
     lateinit var baseNotificationBuilder: NotificationCompat.Builder
 
-    private var totalTimeRunInSeconds = MutableLiveData<Long>() // LiveData to display time in notifications [00:00:00]
+    private var totalTimeRunInSeconds =
+        MutableLiveData<Long>() // LiveData to display time in notifications [00:00:00]
+
+    private lateinit var mCurrentNotificationBuilder: NotificationCompat.Builder
 
     companion object {
         var isTracking = MutableLiveData<Boolean>()
         var pathPoints = MutableLiveData<PolyLines>()
-        var totalTimeRunInMillis = MutableLiveData<Long>() // LiveData for TrackingFragment stop-watch TextView.
+        var totalTimeRunInMillis =
+            MutableLiveData<Long>() // LiveData for TrackingFragment stop-watch TextView.
     }
 
     /**
@@ -79,11 +81,14 @@ class TrackingService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
+        mCurrentNotificationBuilder = baseNotificationBuilder
+
         postInitialValues()
 
         // Observe the changes in the isTracking LiveData.
         isTracking.observe(this) {
             updateLocationTracking(it)
+            updateNotificationTrackingState(it)
         }
     }
 
@@ -124,7 +129,7 @@ class TrackingService : LifecycleService() {
         timerStarted = System.currentTimeMillis()
 
         CoroutineScope(Dispatchers.Main).launch {
-            while(isTracking.value == true){
+            while (isTracking.value == true) {
                 // Time difference between time started and now.
                 elapsedTime = System.currentTimeMillis() - timerStarted
 
@@ -136,8 +141,10 @@ class TrackingService : LifecycleService() {
                  * One entire seconds = 1000L.
                  * It will allow to enter in the if block when totalTimeRunInMillis values are like 1000L,2000L,3000L as so on...(just an example)
                  */
-                if(totalTimeRunInMillis.value!! >= lastSecondsTimestamp + 1000L){
-                    totalTimeRunInSeconds.postValue(totalTimeRunInSeconds.value?: 0L + 1)  // Post the total seconds elapsed.
+                if (totalTimeRunInMillis.value!! >= lastSecondsTimestamp + 1000L) {
+                    totalTimeRunInSeconds.postValue(
+                        totalTimeRunInSeconds.value!! + 1
+                    )  // Post the total seconds elapsed.
                     lastSecondsTimestamp += 1000L // Add 1 sec in millis in global variable which will be used when runner transition from pause => resume state.
                 }
 
@@ -149,6 +156,9 @@ class TrackingService : LifecycleService() {
         }
     }
 
+    /**
+     * Pause the tracking.
+     */
     private fun pauseService() {
         isTracking.postValue(false)
     }
@@ -182,6 +192,52 @@ class TrackingService : LifecycleService() {
             fusedLocationProviderClient.removeLocationUpdates(locationCallback)
         }
     }
+
+    /**
+     * Update the notification action button base on tracking state.
+     */
+    private fun updateNotificationTrackingState(isTracking: Boolean) {
+        // Action Text
+        val actionText =
+            if (isTracking) "Pause" else "Start" // Action Button Text based on current tracking state.
+
+        // Intent for Action Buttons.
+        val actionIntent = Intent(this, TrackingService::class.java).apply {
+            action = if (isTracking) ACTION_PAUSE_SERVICE else ACTION_START_OR_RESUME_SERVICE
+        }
+
+        // Request Code
+        val requestCode = if (isTracking) 1 else 2
+
+        // Pending Intent for Action Buttons.
+        val actionPendingIntent =
+            PendingIntent.getService(this, requestCode, actionIntent, FLAG_UPDATE_CURRENT)
+
+        // Action Button Icon.
+        val actionIcon =
+            if (isTracking) R.drawable.ic_pause_black_24dp else R.drawable.ic_baseline_play
+
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        // Remove all the action button before updating with the new action buttons.
+        mCurrentNotificationBuilder.javaClass.getDeclaredField("mActions").apply {
+            isAccessible = true // Make this field accessible.
+            set(
+                mCurrentNotificationBuilder,
+                ArrayList<NotificationCompat.Action>()
+            ) // set an empty list of action buttons.
+        }
+
+        mCurrentNotificationBuilder = baseNotificationBuilder
+            .addAction(actionIcon, actionText, actionPendingIntent)
+
+        notificationManager.notify(
+            NOTIFICATION_ID,
+            mCurrentNotificationBuilder.build()
+        ) // Update the notification with action buttons.
+    }
+
 
     /**
      * Callback for receiving location updates,extract LatLng from LocationResult and pass it to addPathPoints() fun.
@@ -242,8 +298,16 @@ class TrackingService : LifecycleService() {
 
         // Start the foreground service and displays notification.
         startForeground(NOTIFICATION_ID, baseNotificationBuilder.build())
-    }
 
+        // Observe the changes in totalTimeRunInSeconds LiveData.
+        totalTimeRunInSeconds.observe(this) {
+            mCurrentNotificationBuilder.setContentText(TrackingUtility.getFormattedStopWatchTime(it * 1000L))
+            notificationManager.notify(
+                NOTIFICATION_ID,
+                mCurrentNotificationBuilder.build()
+            ) // Update the notification with Elapsed Time in HH:mm:ss format.
+        }
+    }
 
     /**
      * Creates the Notification Channel for the device greater or equal to OREO.
