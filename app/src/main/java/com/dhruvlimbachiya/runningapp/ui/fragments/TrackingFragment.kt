@@ -2,15 +2,15 @@ package com.dhruvlimbachiya.runningapp.ui.fragments
 
 import android.content.Intent
 import android.os.Bundle
-import android.text.TextUtils.indexOf
 import android.view.*
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import com.dhruvlimbachiya.runningapp.R
-import com.dhruvlimbachiya.runningapp.others.Constants
 import com.dhruvlimbachiya.runningapp.others.Constants.ACTION_PAUSE_SERVICE
 import com.dhruvlimbachiya.runningapp.others.Constants.ACTION_START_OR_RESUME_SERVICE
+import com.dhruvlimbachiya.runningapp.others.Constants.ACTION_STOP_SERVICE
 import com.dhruvlimbachiya.runningapp.others.Constants.CAMERA_ZOOM
 import com.dhruvlimbachiya.runningapp.others.Constants.POLYLINE_COLOR
 import com.dhruvlimbachiya.runningapp.others.Constants.POLYLINE_WIDTH
@@ -21,8 +21,10 @@ import com.dhruvlimbachiya.runningapp.ui.viewmodels.MainViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.PolylineOptions
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.fragment_tracking.*
+import timber.log.Timber
 
 /**
  * Created by Dhruv Limbachiya on 30-07-2021.
@@ -41,7 +43,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
 
     private var timeInMills = 0L
 
-    private lateinit var mMenu: Menu
+    private var mMenu: Menu? = null
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -72,6 +74,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
         }
 
         subscribeToObservers()
+
     }
 
     /**
@@ -79,6 +82,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
      */
     private fun toggleRun() {
         if (isTracking) {
+            mMenu?.getItem(0)?.isVisible = true  // Make Cancel Run menu visible.
             sendCommandToService(ACTION_PAUSE_SERVICE)
         } else {
             sendCommandToService(ACTION_START_OR_RESUME_SERVICE)
@@ -111,6 +115,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
     private fun updateTrackingStatus(isTracking: Boolean) {
         this.isTracking = isTracking
         if (isTracking) {
+            mMenu?.getItem(0)?.isVisible = true // Make Cancel Run menu visible.
             btnToggleRun.text = getString(R.string.text_stop)
             btnFinishRun.isVisible = false
         } else {
@@ -177,14 +182,57 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
             requireContext().startService(this)
         }
 
-
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         super.onCreateOptionsMenu(menu, inflater)
-        inflater.inflate(R.menu.tracking_toolbar_menu,menu)
+        inflater.inflate(R.menu.tracking_toolbar_menu, menu)
         mMenu = menu
     }
 
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        super.onPrepareOptionsMenu(menu)
+        // User is running. Show Cancel Run Menu to cancel the current run.
+        mMenu?.getItem(0)?.isVisible = timeInMills > 0L
+    }
 
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.menu_cancel_run -> {
+                showCancelTrackingDialog()
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    /**
+     * Shows a Alert Dialog on Cancel icon click.
+     */
+    private fun showCancelTrackingDialog() {
+        val cancelDialog =
+            MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogTheme).apply {
+                setTitle("Cancel the Run?")
+                setMessage("Are you sure to cancel the current run and delete all its data?")
+                setIcon(R.drawable.ic_delete)
+                setPositiveButton("Yes") { _, _ ->
+                    stopRun()
+                }
+                setNegativeButton("No") { dialog, _ ->
+                    dialog.cancel()
+                }
+            }.create()
+
+        cancelDialog.show()
+    }
+
+    /**
+     * It will stop the run by sending stop action to the service and navigate back to the [RunFragment]
+     */
+    private fun stopRun() {
+        sendCommandToService(ACTION_STOP_SERVICE)
+        // Navigate back to [RunFragment]
+        findNavController().navigate(
+            TrackingFragmentDirections.actionTrackingFragmentToRunFragment()
+        )
+    }
 
     override fun onResume() {
         super.onResume()

@@ -50,6 +50,7 @@ typealias PolyLines = MutableList<PolyLine> // List containing multiple PolyLine
 class TrackingService : LifecycleService() {
 
     private var isFirstTime = true
+    private var isServiceKilled = false
 
     @Inject
     lateinit var fusedLocationProviderClient: FusedLocationProviderClient
@@ -100,22 +101,34 @@ class TrackingService : LifecycleService() {
                         startForegroundService()
                         isFirstTime = false
                     } else {
-                        startTimer()
                         Timber.i("Resuming the service...")
+                        startTimer()
                     }
                 }
 
                 ACTION_PAUSE_SERVICE -> {
-                    pauseService()
                     Timber.i("Action service paused")
+                    pauseService()
                 }
 
                 ACTION_STOP_SERVICE -> {
                     Timber.i("Action service stopped")
+                    killService()
                 }
             }
         }
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    /**
+     * Kill the service,reset vars & LiveData.
+     */
+    private fun killService() {
+        isServiceKilled = true
+        isFirstTime = true
+        postInitialValues()
+        stopForeground(true) // Remove the notification from the status bar.
+        stopSelf() // Stop the service manually.
     }
 
     private var timerStarted = 0L
@@ -232,10 +245,12 @@ class TrackingService : LifecycleService() {
         mCurrentNotificationBuilder = baseNotificationBuilder
             .addAction(actionIcon, actionText, actionPendingIntent)
 
-        notificationManager.notify(
-            NOTIFICATION_ID,
-            mCurrentNotificationBuilder.build()
-        ) // Update the notification with action buttons.
+        if(!isServiceKilled){
+            notificationManager.notify(
+                NOTIFICATION_ID,
+                mCurrentNotificationBuilder.build()
+            ) // Update the notification with action buttons.
+        }
     }
 
 
@@ -301,11 +316,13 @@ class TrackingService : LifecycleService() {
 
         // Observe the changes in totalTimeRunInSeconds LiveData.
         totalTimeRunInSeconds.observe(this) {
-            mCurrentNotificationBuilder.setContentText(TrackingUtility.getFormattedStopWatchTime(it * 1000L))
-            notificationManager.notify(
-                NOTIFICATION_ID,
-                mCurrentNotificationBuilder.build()
-            ) // Update the notification with Elapsed Time in HH:mm:ss format.
+            if(!isServiceKilled){
+                mCurrentNotificationBuilder.setContentText(TrackingUtility.getFormattedStopWatchTime(it * 1000L))
+                notificationManager.notify(
+                    NOTIFICATION_ID,
+                    mCurrentNotificationBuilder.build()
+                ) // Update the notification with Elapsed Time in HH:mm:ss format.
+            }
         }
     }
 

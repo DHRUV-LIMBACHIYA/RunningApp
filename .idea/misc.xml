@@ -3,11 +3,14 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Android Projects/RunningApp/app/src/main/res/drawable/ic_close_white.xml" value="0.15555555555555556" />
+        <entry key="..\:/Android Projects/RunningApp/app/src/main/res/drawable/ic_run.xml" value="0.15555555555555556" />
         <entry key="..\:/Android Projects/RunningApp/app/src/main/res/layout/activity_main.xml" value="0.20208333333333334" />
         <entry key="..\:/Android Projects/RunningApp/app/src/main/res/layout/fragment_run.xml" value="0.20208333333333334" />
         <entry key="..\:/Android Projects/RunningApp/app/src/main/res/layout/fragment_setup.xml" value="0.20625" />
         <entry key="..\:/Android Projects/RunningApp/app/src/main/res/layout/fragment_tracking.xml" value="0.20625" />
         <entry key="..\:/Android Projects/RunningApp/app/src/main/res/menu/bottom_nav_menu.xml" value="0.20625" />
+        <entry key="..\:/Android Projects/RunningApp/app/src/main/res/menu/tracking_toolbar_menu.xml" value="0.20625" />
       </map>
     </option>
   </component>
