@@ -2,7 +2,11 @@ package com.dhruvlimbachiya.runningapp.others
 
 import android.Manifest
 import android.content.Context
+import android.location.Location
 import android.os.Build
+import androidx.core.location.LocationCompat
+import com.dhruvlimbachiya.runningapp.service.PolyLine
+import com.google.android.gms.maps.model.LatLngBounds
 import pub.devrel.easypermissions.EasyPermissions
 import java.util.concurrent.TimeUnit
 
@@ -48,5 +52,30 @@ object TrackingUtility {
         milliSeconds /= 10
         return String.format("%02d:%02d:%02d:%02d", hours, minutes, seconds, milliSeconds)
 
+    }
+
+    /**
+     * Calculate the given LatLng positions distance into meters of type INT.
+     */
+    fun calculateDistanceInMeters(polyLine: PolyLine) : Int {
+        var distance = 0f
+        for (i in 0..polyLine.size - 2){
+            val firstPosition = polyLine[i]
+            val nextPosition = polyLine[i + 1]
+
+            val result = FloatArray(1) // Hold the results
+            // Find out the distance between point 1 to point 2 using LAT & LNG.
+            Location.distanceBetween(
+                firstPosition.latitude,
+                firstPosition.longitude,
+                nextPosition.latitude,
+                nextPosition.longitude,
+                result
+            )
+
+            distance += result[0] // Result[0] will return distance
+        }
+
+       return distance.toInt()
     }
 }

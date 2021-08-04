@@ -8,6 +8,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.dhruvlimbachiya.runningapp.R
+import com.dhruvlimbachiya.runningapp.db.Run
 import com.dhruvlimbachiya.runningapp.others.Constants.ACTION_PAUSE_SERVICE
 import com.dhruvlimbachiya.runningapp.others.Constants.ACTION_START_OR_RESUME_SERVICE
 import com.dhruvlimbachiya.runningapp.others.Constants.ACTION_STOP_SERVICE
@@ -20,11 +21,15 @@ import com.dhruvlimbachiya.runningapp.service.TrackingService
 import com.dhruvlimbachiya.runningapp.ui.viewmodels.MainViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.fragment_tracking.*
 import timber.log.Timber
+import java.util.*
+import kotlin.math.round
 
 /**
  * Created by Dhruv Limbachiya on 30-07-2021.
@@ -44,6 +49,8 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
     private var timeInMills = 0L
 
     private var mMenu: Menu? = null
+
+    private var weight = 80f
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -71,6 +78,11 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
 
         btnToggleRun.setOnClickListener {
             toggleRun()
+        }
+
+        btnFinishRun.setOnClickListener {
+            zoomOutCameraToSeeTheEntireTrack()
+            finishAndSaveRunInDb()
         }
 
         subscribeToObservers()
@@ -123,6 +135,64 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
             btnFinishRun.isVisible = true
         }
     }
+
+    /**
+     * Function responsible for displaying all the polyline by moving camera to the bounded area.
+     */
+    private fun zoomOutCameraToSeeTheEntireTrack() {
+        val bounds = LatLngBounds.builder() // Create bound(limit) based on Latitude & Longitude.
+        for(polyLine in pathPoints){
+            for(latLng in polyLine){
+                bounds.include(latLng) // include Lat & Lng to create a bounded area.
+            }
+        }
+
+        // Move Camera to the Bounded Area.
+        mGoogleMap?.moveCamera(
+            CameraUpdateFactory.newLatLngBounds(
+                bounds.build(),
+                mapView.width,
+                mapView.height,
+                (mapView.height * 0.05f).toInt()
+            )
+        )
+    }
+
+    /**
+     * Function responsibile for finishing the run and save Run data in the Database.
+     */
+    private fun finishAndSaveRunInDb() {
+        mGoogleMap?.snapshot { bitmap ->
+            var distanceInMeters: Int = 0
+
+            val timeStamp = Calendar.getInstance().timeInMillis
+
+            for(polyLine in pathPoints){
+                distanceInMeters += TrackingUtility.calculateDistanceInMeters(polyLine)
+            }
+
+            val avgSpeedInKMH = round((distanceInMeters / 1000f) / (timeInMills / 1000f / 60 / 60) * 10f) / 10f
+
+            val caloriesBurned = ((distanceInMeters / 1000f) * weight).toInt()
+
+            val run = Run(
+                bitmap,
+                timeStamp,
+                avgSpeedInKMH,
+                distanceInMeters,
+                timeInMills,
+                caloriesBurned
+            )
+            mViewModel.insertRun(run)
+            Snackbar.make(
+                requireActivity().findViewById(R.id.rootView),
+                "Run saved successfully",
+                Snackbar.LENGTH_LONG
+            ).show()
+            stopRun()
+        }
+    }
+    
 
     /**
      * Move camera to latest position(LatLng) of Runner.
