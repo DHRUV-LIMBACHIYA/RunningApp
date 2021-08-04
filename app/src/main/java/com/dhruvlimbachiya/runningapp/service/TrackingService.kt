@@ -33,11 +33,13 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.maps.model.LatLng
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import javax.inject.Inject
 
 /**
  * Created by Dhruv Limbachiya on 02-08-2021.
@@ -46,10 +48,16 @@ import timber.log.Timber
 typealias PolyLine = MutableList<LatLng> // Single line on map which contains list of LatLng.
 typealias PolyLines = MutableList<PolyLine> // List containing multiple PolyLine(List of LatLng).
 
+@AndroidEntryPoint
 class TrackingService : LifecycleService() {
 
     private var isFirstTime = true
-    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
+
+    @Inject
+    lateinit var fusedLocationProviderClient: FusedLocationProviderClient
+
+    @Inject
+    lateinit var baseNotificationBuilder: NotificationCompat.Builder
 
     private var totalTimeRunInSeconds = MutableLiveData<Long>() // LiveData to display time in notifications [00:00:00]
 
@@ -72,8 +80,6 @@ class TrackingService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         postInitialValues()
-        fusedLocationProviderClient =
-            FusedLocationProviderClient(this) // Create an instance of FusedLocationProviderClient.
 
         // Observe the changes in the isTracking LiveData.
         isTracking.observe(this) {
@@ -234,33 +240,9 @@ class TrackingService : LifecycleService() {
             createNotificationChannel(notificationManager)
         }
 
-        // Build notification.
-        val notificationBuilder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID).apply {
-            setSmallIcon(R.drawable.ic_directions_run_black_24dp)
-            setContentTitle(getString(R.string.app_name))
-            setContentText("00:00:00")
-            setAutoCancel(true)
-            setOngoing(true)
-            setContentIntent(getMainActivityPendingIntent())
-        }
-
         // Start the foreground service and displays notification.
-        startForeground(NOTIFICATION_ID, notificationBuilder.build())
+        startForeground(NOTIFICATION_ID, baseNotificationBuilder.build())
     }
-
-
-    /**
-     * Get the MainActivity as the pending intent.
-     */
-    private fun getMainActivityPendingIntent() = PendingIntent.getActivity(
-        this,
-        0,
-        Intent(this, MainActivity::class.java).also {
-            it.action =
-                ACTION_NAVIGATE_TO_TRACKING_FRAGMENT  // Custom action to indicate the navigation from MainActivity to Tracking Activity.
-        },
-        FLAG_UPDATE_CURRENT
-    )
 
 
     /**
