@@ -3,7 +3,7 @@ package com.dhruvlimbachiya.runningapp.ui.fragments
 import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils.indexOf
-import android.view.View
+import android.view.*
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -36,12 +36,25 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
     private var mGoogleMap: GoogleMap? = null
 
     private var isTracking = false
+
     private var pathPoints = mutableListOf<PolyLine>()
+
     private var timeInMills = 0L
+
+    private lateinit var mMenu: Menu
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         mapView?.onSaveInstanceState(outState)
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        setHasOptionsMenu(true)
+        return super.onCreateView(inflater, container, savedInstanceState)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -65,9 +78,9 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
      * Toggle the run from Start to Stop and vice-versa.
      */
     private fun toggleRun() {
-        if(isTracking){
+        if (isTracking) {
             sendCommandToService(ACTION_PAUSE_SERVICE)
-        }else {
+        } else {
             sendCommandToService(ACTION_START_OR_RESUME_SERVICE)
         }
     }
@@ -76,19 +89,19 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
      * Observe the changes from the LiveData.
      */
     private fun subscribeToObservers() {
-        TrackingService.isTracking.observe(viewLifecycleOwner){
+        TrackingService.isTracking.observe(viewLifecycleOwner) {
             updateTrackingStatus(it)
         }
 
-        TrackingService.pathPoints.observe(viewLifecycleOwner){
+        TrackingService.pathPoints.observe(viewLifecycleOwner) {
             pathPoints = it // Get the fresh list of PolyLines.
             drawPolyLineUsingLatestLatLng()
             moveCameraToRunner()
         }
 
-        TrackingService.totalTimeRunInMillis.observe(viewLifecycleOwner){
+        TrackingService.totalTimeRunInMillis.observe(viewLifecycleOwner) {
             timeInMills = it
-            tvTimer.text = TrackingUtility.getFormattedStopWatchTime(it,true)
+            tvTimer.text = TrackingUtility.getFormattedStopWatchTime(it, true)
         }
     }
 
@@ -97,10 +110,10 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
      */
     private fun updateTrackingStatus(isTracking: Boolean) {
         this.isTracking = isTracking
-        if(isTracking){
+        if (isTracking) {
             btnToggleRun.text = getString(R.string.text_stop)
             btnFinishRun.isVisible = false
-        }else {
+        } else {
             btnToggleRun.text = getString(R.string.text_start)
             btnFinishRun.isVisible = true
         }
@@ -110,7 +123,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
      * Move camera to latest position(LatLng) of Runner.
      */
     private fun moveCameraToRunner() {
-        if(pathPoints.isNotEmpty() && pathPoints.last().isNotEmpty()){
+        if (pathPoints.isNotEmpty() && pathPoints.last().isNotEmpty()) {
             mGoogleMap?.moveCamera(
                 CameraUpdateFactory.newLatLngZoom(
                     pathPoints.last().last(), // get the latest LatLng
@@ -123,8 +136,8 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
     /**
      * Draw all the polyLines in case of Activity re-creation
      */
-    private fun drawAllPolyLines(){
-        for(polyLine in pathPoints){
+    private fun drawAllPolyLines() {
+        for (polyLine in pathPoints) {
             val polyLineOptions = PolylineOptions().apply {
                 width(POLYLINE_WIDTH)
                 color(POLYLINE_COLOR)
@@ -140,7 +153,8 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
      */
     private fun drawPolyLineUsingLatestLatLng() {
         if (pathPoints.isNotEmpty() && pathPoints.last().size > 1) { // PathPoints should not be empty and its last(current) elements at-least contains 2 LatLng Objects.
-            val lastSecondLatLng = pathPoints.last()[pathPoints.last().size - 2]// Get the last second item.
+            val lastSecondLatLng =
+                pathPoints.last()[pathPoints.last().size - 2]// Get the last second item.
             val lastLatLng = pathPoints.last().last() // Get the last item.
 
             val polylineOptions = PolylineOptions().apply {
@@ -158,10 +172,19 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
      * Send commands to the [TrackingService]
      */
     private fun sendCommandToService(command: String) =
-        Intent(requireContext(),TrackingService::class.java).apply {
+        Intent(requireContext(), TrackingService::class.java).apply {
             this.action = command
             requireContext().startService(this)
         }
+
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        super.onCreateOptionsMenu(menu, inflater)
+        inflater.inflate(R.menu.tracking_toolbar_menu,menu)
+        mMenu = menu
+    }
+
+
 
     override fun onResume() {
         super.onResume()
