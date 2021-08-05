@@ -7,7 +7,9 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.dhruvlimbachiya.runningapp.R
+import com.dhruvlimbachiya.runningapp.adapters.RunAdapter
 import com.dhruvlimbachiya.runningapp.others.Constants.REQUEST_CODE_LOCATION_PERMISSION
 import com.dhruvlimbachiya.runningapp.others.TrackingUtility
 import com.dhruvlimbachiya.runningapp.ui.viewmodels.MainViewModel
@@ -25,10 +27,14 @@ class RunFragment : Fragment(R.layout.fragment_run), EasyPermissions.PermissionC
 
     private val mViewModel: MainViewModel by viewModels()
 
+    private lateinit var mAdapter : RunAdapter
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         requestPermission()
+
+        setUpRecyclerView()
 
         fab.setOnClickListener {
             findNavController()
@@ -36,8 +42,35 @@ class RunFragment : Fragment(R.layout.fragment_run), EasyPermissions.PermissionC
                     RunFragmentDirections.actionRunFragmentToTrackingFragment()
                 )
         }
+
+        subscribeToObserver()
     }
 
+    /**
+     * Function will observe the changes in LiveData.
+     */
+    private fun subscribeToObserver() {
+        mViewModel.runSortedByData.observe(viewLifecycleOwner){
+            if(it.isNotEmpty()){
+                mAdapter.submitList(it)
+            }
+        }
+    }
+
+    /**
+     * Set up the Runs RecyclerView.
+     */
+    private fun setUpRecyclerView() {
+        rvRuns.apply {
+            mAdapter = RunAdapter()
+            adapter = mAdapter
+            layoutManager = LinearLayoutManager(requireContext())
+        }
+    }
+
+    /**
+     * Function responsible for requesting LOCATION permissions using EasyPermission Library.
+     */
     private fun requestPermission() {
         if(TrackingUtility.hasLocationPermission(requireContext())){
             return
