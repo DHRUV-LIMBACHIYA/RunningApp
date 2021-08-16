@@ -32,4 +32,10 @@ object Constants {
     const val CAMERA_ZOOM = 15f
 
     const val TIME_ELAPSED_DELAY = 50L
+
+    // Shared Preferences
+    const val SHARED_PREF_NAME = "sharedPrefs"
+    const val KEY_IS_FIRST_TIME = "KEY_IS_FIRST_TIME"
+    const val KEY_NAME = "KEY_NAME"
+    const val KEY_WEIGHT = "KEY_WEIGHT"
 }

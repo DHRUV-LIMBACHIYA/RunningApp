@@ -29,6 +29,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.fragment_tracking.*
 import timber.log.Timber
 import java.util.*
+import javax.inject.Inject
 import kotlin.math.round
 
 /**
@@ -50,7 +51,8 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
 
     private var mMenu: Menu? = null
 
-    private var weight = 80f
+    @set:Inject
+    var weight = 80f
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -159,7 +161,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
     }
 
     /**
-     * Function responsibile for finishing the run and save Run data in the Database.
+     * Function responsible for finishing the run and save Run data in the Database.
      */
     private fun finishAndSaveRunInDb() {
         mGoogleMap?.snapshot { bitmap ->
