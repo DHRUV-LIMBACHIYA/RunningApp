@@ -36,6 +36,8 @@ import kotlin.math.round
  * Created by Dhruv Limbachiya on 30-07-2021.
  */
 
+const val CANCEL_TRACKING_DIALOG_TAG = "cancelDialog"
+
 @AndroidEntryPoint
 class TrackingFragment : Fragment(R.layout.fragment_tracking) {
 
@@ -71,6 +73,15 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         mapView?.onCreate(savedInstanceState)
+
+        if(savedInstanceState != null) {
+            val cancelDialog = parentFragmentManager.findFragmentByTag(CANCEL_TRACKING_DIALOG_TAG) as CancelTrackingDialog?
+            cancelDialog?.let {
+                it.setPositiveListener {
+                    stopRun()
+                }
+            }
+        }
 
         // Load the Google Map Asynchronously.
         mapView.getMapAsync { map ->
@@ -132,7 +143,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
             mMenu?.getItem(0)?.isVisible = true // Make Cancel Run menu visible.
             btnToggleRun.text = getString(R.string.text_stop)
             btnFinishRun.isVisible = false
-        } else {
+        } else if(!isTracking && timeInMills > 0L) {
             btnToggleRun.text = getString(R.string.text_start)
             btnFinishRun.isVisible = true
         }
@@ -279,26 +290,18 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
      * Shows a Alert Dialog on Cancel icon click.
      */
     private fun showCancelTrackingDialog() {
-        val cancelDialog =
-            MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogTheme).apply {
-                setTitle("Cancel the Run?")
-                setMessage("Are you sure to cancel the current run and delete all its data?")
-                setIcon(R.drawable.ic_delete)
-                setPositiveButton("Yes") { _, _ ->
-                    stopRun()
-                }
-                setNegativeButton("No") { dialog, _ ->
-                    dialog.cancel()
-                }
-            }.create()
-
-        cancelDialog.show()
+       CancelTrackingDialog().apply {
+           setPositiveListener {
+               stopRun()
+           }
+       }.show(parentFragmentManager,CANCEL_TRACKING_DIALOG_TAG)
     }
 
     /**
      * It will stop the run by sending stop action to the service and navigate back to the [RunFragment]
      */
     private fun stopRun() {
+        tvTimer.text = "00:00:00:00"
         sendCommandToService(ACTION_STOP_SERVICE)
         // Navigate back to [RunFragment]
         findNavController().navigate(

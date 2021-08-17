@@ -74,10 +74,10 @@ class TrackingService : LifecycleService() {
      * Add/Post initial values to LiveData vars.
      */
     private fun postInitialValues() {
-        isTracking.postValue(false)
-        pathPoints.postValue(mutableListOf())
-        totalTimeRunInSeconds.postValue(0L)
-        totalTimeRunInMillis.postValue(0L)
+        isTracking.value = false
+        pathPoints.value = mutableListOf()
+        totalTimeRunInSeconds.value = 0L
+        totalTimeRunInMillis.value = 0L
     }
 
     override fun onCreate() {
@@ -124,9 +124,9 @@ class TrackingService : LifecycleService() {
      * Kill the service,reset vars & LiveData.
      */
     private fun killService() {
+        postInitialValues()
         isServiceKilled = true
         isFirstTime = true
-        postInitialValues()
         stopForeground(true) // Remove the notification from the status bar.
         stopSelf() // Stop the service manually.
     }

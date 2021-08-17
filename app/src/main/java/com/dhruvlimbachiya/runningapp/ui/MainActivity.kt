@@ -28,6 +28,7 @@ class MainActivity : AppCompatActivity() {
         navHostFragment =
             supportFragmentManager.findFragmentById(R.id.fragmentContainerView) as NavHostFragment // Find the NavHostFragment.
         bottomNavigationView.setupWithNavController(navHostFragment.findNavController()) // Set navController to BottomNavigationView
+        bottomNavigationView.setOnItemReselectedListener { /* NO-OP */ } // Don't load fragment again on bottom menu reselect.
 
         navHostFragment.findNavController().addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {

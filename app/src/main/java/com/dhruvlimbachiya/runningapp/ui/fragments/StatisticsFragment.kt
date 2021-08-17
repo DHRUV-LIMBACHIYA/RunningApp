@@ -32,6 +32,9 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         setUpBarChart()
     }
 
+    /**
+     * Set up the bar chart.
+     */
     private fun setUpBarChart() {
         barChart.xAxis.apply {
             position = XAxis.XAxisPosition.BOTTOM
